@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { sortedLocations as fallbackLocations } from '../data/turkeyLocations'
 import './WeatherPanel.scss'
 
@@ -9,6 +9,7 @@ const OPENWEATHER_FORECAST_PATH =
   import.meta.env.VITE_OPENWEATHER_FORECAST_PATH || '/data/2.5/forecast'
 const OPENWEATHER_GEO_PATH =
   import.meta.env.VITE_OPENWEATHER_GEO_PATH || '/geo/1.0/direct'
+const WEATHER_STORAGE_KEY = 'weatherSelection'
 
 const WEATHER_API = `${OPENWEATHER_BASE_URL}${OPENWEATHER_FORECAST_PATH}?appid=${OPENWEATHER_API_KEY}&units=metric&lang=tr`
 const GEO_API = `${OPENWEATHER_BASE_URL}${OPENWEATHER_GEO_PATH}?appid=${OPENWEATHER_API_KEY}&limit=1`
@@ -32,15 +33,38 @@ const formatDay = (value) =>
     month: 'short',
   })
 
+const getStoredWeatherSelection = () => {
+  if (typeof window === 'undefined') return null
+  try {
+    const stored = window.localStorage.getItem(WEATHER_STORAGE_KEY)
+    if (!stored) return null
+    const parsed = JSON.parse(stored)
+    if (
+      parsed &&
+      typeof parsed.city === 'string' &&
+      typeof parsed.district === 'string'
+    ) {
+      return parsed
+    }
+  } catch (error) {
+    return null
+  }
+  return null
+}
+
 function WeatherPanel() {
+  const storedSelectionRef = useRef(getStoredWeatherSelection())
+  const storedSelection = storedSelectionRef.current
   const [locations, setLocations] = useState(fallbackLocations)
   const [locationsState, setLocationsState] = useState({
     status: 'loading',
     error: null,
   })
-  const [selectedCity, setSelectedCity] = useState(fallbackLocations[0].city)
+  const [selectedCity, setSelectedCity] = useState(
+    storedSelection?.city || fallbackLocations[0].city
+  )
   const [selectedDistrict, setSelectedDistrict] = useState(
-    fallbackLocations[0].districts[0]
+    storedSelection?.district || fallbackLocations[0].districts[0]
   )
   const [weatherState, setWeatherState] = useState({
     status: 'loading',
@@ -91,6 +115,13 @@ function WeatherPanel() {
 
   useEffect(() => {
     if (!locations.length) return
+    if (
+      locationsState.status === 'loading' &&
+      storedSelection &&
+      !locations.find((item) => item.city === storedSelection.city)
+    ) {
+      return
+    }
     const cityExists = locations.find((item) => item.city === selectedCity)
     const nextCity = cityExists ? selectedCity : locations[0].city
     const nextDistricts =
@@ -100,7 +131,25 @@ function WeatherPanel() {
       : nextDistricts[0] || 'Merkez'
     if (nextCity !== selectedCity) setSelectedCity(nextCity)
     if (nextDistrict !== selectedDistrict) setSelectedDistrict(nextDistrict)
-  }, [locations, selectedCity, selectedDistrict])
+  }, [
+    locations,
+    locationsState.status,
+    selectedCity,
+    selectedDistrict,
+    storedSelection,
+  ])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(
+        WEATHER_STORAGE_KEY,
+        JSON.stringify({ city: selectedCity, district: selectedDistrict })
+      )
+    } catch (error) {
+      // Ignore storage errors (e.g., quota or private mode).
+    }
+  }, [selectedCity, selectedDistrict])
 
   useEffect(() => {
     const controller = new AbortController()

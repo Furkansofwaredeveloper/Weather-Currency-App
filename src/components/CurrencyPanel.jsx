@@ -13,11 +13,41 @@ const FALLBACK_CURRENCIES = [
   { code: 'CAD', description: 'Canadian Dollar' },
   { code: 'AUD', description: 'Australian Dollar' },
 ]
+const CURRENCY_STORAGE_KEY = 'currencySelection'
+
+const getStoredCurrencySelection = () => {
+  if (typeof window === 'undefined') return null
+  try {
+    const stored = window.localStorage.getItem(CURRENCY_STORAGE_KEY)
+    if (!stored) return null
+    const parsed = JSON.parse(stored)
+    if (!parsed || typeof parsed !== 'object') return null
+    const amount =
+      typeof parsed.amount === 'number'
+        ? String(parsed.amount)
+        : typeof parsed.amount === 'string'
+        ? parsed.amount
+        : null
+    const fromCurrency =
+      typeof parsed.fromCurrency === 'string' ? parsed.fromCurrency : null
+    const toCurrency =
+      typeof parsed.toCurrency === 'string' ? parsed.toCurrency : null
+    if (!amount && !fromCurrency && !toCurrency) return null
+    return { amount, fromCurrency, toCurrency }
+  } catch (error) {
+    return null
+  }
+}
 
 function CurrencyPanel() {
-  const [amount, setAmount] = useState('100')
-  const [fromCurrency, setFromCurrency] = useState('TRY')
-  const [toCurrency, setToCurrency] = useState('USD')
+  const storedSelection = getStoredCurrencySelection()
+  const [amount, setAmount] = useState(storedSelection?.amount || '100')
+  const [fromCurrency, setFromCurrency] = useState(
+    storedSelection?.fromCurrency || 'TRY'
+  )
+  const [toCurrency, setToCurrency] = useState(
+    storedSelection?.toCurrency || 'USD'
+  )
   const [symbolsState, setSymbolsState] = useState({
     status: 'loading',
     symbols: [],
@@ -118,6 +148,22 @@ function CurrencyPanel() {
 
     return () => controller.abort()
   }, [fromCurrency, toCurrency])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      window.localStorage.setItem(
+        CURRENCY_STORAGE_KEY,
+        JSON.stringify({
+          amount,
+          fromCurrency,
+          toCurrency,
+        })
+      )
+    } catch (error) {
+      // Ignore storage errors (e.g., quota or private mode).
+    }
+  }, [amount, fromCurrency, toCurrency])
 
   const converted = useMemo(() => {
     const numeric = parseFloat(amount)
