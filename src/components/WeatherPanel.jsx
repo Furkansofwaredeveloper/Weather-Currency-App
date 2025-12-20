@@ -2,11 +2,19 @@ import { useEffect, useState } from 'react'
 import { sortedLocations as fallbackLocations } from '../data/turkeyLocations'
 import './WeatherPanel.scss'
 
-const WEATHER_API =
-  'http://api.openweathermap.org/data/2.5/forecast?appid=a9d3415403db7c8fa9d805d9f4653fa5&units=metric&lang=tr'
-const GEO_API =
-  'http://api.openweathermap.org/geo/1.0/direct?appid=a9d3415403db7c8fa9d805d9f4653fa5&limit=1'
-const LOCATIONS_API = 'https://turkiyeapi.dev/api/v1/provinces'
+const OPENWEATHER_API_KEY = import.meta.env.VITE_OPENWEATHER_API_KEY
+const OPENWEATHER_BASE_URL =
+  import.meta.env.VITE_OPENWEATHER_BASE_URL || 'https://api.openweathermap.org'
+const OPENWEATHER_FORECAST_PATH =
+  import.meta.env.VITE_OPENWEATHER_FORECAST_PATH || '/data/2.5/forecast'
+const OPENWEATHER_GEO_PATH =
+  import.meta.env.VITE_OPENWEATHER_GEO_PATH || '/geo/1.0/direct'
+
+const WEATHER_API = `${OPENWEATHER_BASE_URL}${OPENWEATHER_FORECAST_PATH}?appid=${OPENWEATHER_API_KEY}&units=metric&lang=tr`
+const GEO_API = `${OPENWEATHER_BASE_URL}${OPENWEATHER_GEO_PATH}?appid=${OPENWEATHER_API_KEY}&limit=1`
+const LOCATIONS_API =
+  import.meta.env.VITE_TURKEY_LOCATIONS_API ||
+  'https://turkiyeapi.dev/api/v1/provinces'
 
 const formatTemp = (value) => `${Math.round(value)}°C`
 const formatWind = (value) => `${Math.round(value)} m/s`

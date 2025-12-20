@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import './CurrencyPanel.scss'
 
-const RATES_URL = 'https://open.er-api.com/v6/latest'
+const RATES_URL =
+  import.meta.env.VITE_RATES_URL || 'https://open.er-api.com/v6/latest'
 const FALLBACK_CURRENCIES = [
   { code: 'TRY', description: 'Turkish Lira' },
   { code: 'USD', description: 'US Dollar' },
