@@ -3,6 +3,10 @@ import './CurrencyPanel.scss'
 
 const RATES_URL =
   import.meta.env.VITE_RATES_URL || 'https://open.er-api.com/v6/latest'
+const METALPRICE_API_URL =
+  import.meta.env.VITE_METALPRICE_API_URL ||
+  'https://api.metalpriceapi.com/v1/latest'
+const METALPRICE_API_KEY = import.meta.env.VITE_METALPRICE_API_KEY
 const FALLBACK_CURRENCIES = [
   { code: 'TRY', description: 'Turkish Lira' },
   { code: 'USD', description: 'US Dollar' },
@@ -14,6 +18,9 @@ const FALLBACK_CURRENCIES = [
   { code: 'AUD', description: 'Australian Dollar' },
 ]
 const CURRENCY_STORAGE_KEY = 'currencySelection'
+const METAL_DISPLAY_CURRENCY =
+  import.meta.env.VITE_METAL_DISPLAY_CURRENCY || 'TRY'
+const TROY_OUNCE_IN_GRAMS = 31.1034768
 
 const getStoredCurrencySelection = () => {
   if (typeof window === 'undefined') return null
@@ -58,6 +65,14 @@ function CurrencyPanel() {
     rate: null,
     date: null,
     error: null,
+  })
+  const [metalState, setMetalState] = useState({
+    status: 'loading',
+    goldGram: null,
+    silverGram: null,
+    date: null,
+    error: null,
+    source: null,
   })
 
   useEffect(() => {
@@ -165,11 +180,125 @@ function CurrencyPanel() {
     }
   }, [amount, fromCurrency, toCurrency])
 
+  useEffect(() => {
+    const controller = new AbortController()
+    const loadMetals = async () => {
+      try {
+        setMetalState({
+          status: 'loading',
+          goldGram: null,
+          silverGram: null,
+          date: null,
+          error: null,
+          source: null,
+        })
+        if (METALPRICE_API_KEY) {
+          const buildMetalpriceUrl = (base, quote) => {
+            const params = new URLSearchParams({
+              api_key: METALPRICE_API_KEY,
+              base,
+              currencies: quote,
+            })
+            return `${METALPRICE_API_URL}?${params.toString()}`
+          }
+          const [goldResponse, silverResponse] = await Promise.all([
+            fetch(
+              buildMetalpriceUrl('XAU', METAL_DISPLAY_CURRENCY),
+              { signal: controller.signal }
+            ),
+            fetch(
+              buildMetalpriceUrl('XAG', METAL_DISPLAY_CURRENCY),
+              { signal: controller.signal }
+            ),
+          ])
+          if (!goldResponse.ok || !silverResponse.ok) {
+            throw new Error('Altin/gumus verisi alinamadi.')
+          }
+          const [goldPayload, silverPayload] = await Promise.all([
+            goldResponse.json(),
+            silverResponse.json(),
+          ])
+          if (goldPayload.success === false || silverPayload.success === false) {
+            throw new Error('Altin/gumus verisi alinamadi.')
+          }
+          const goldRate = goldPayload.rates?.[METAL_DISPLAY_CURRENCY]
+          const silverRate = silverPayload.rates?.[METAL_DISPLAY_CURRENCY]
+          if (!goldRate || !silverRate) {
+            throw new Error('Altin/gumus kurlari bulunamadi.')
+          }
+          const metalDate = goldPayload.date
+            ? new Date(goldPayload.date).toLocaleDateString('tr-TR')
+            : goldPayload.timestamp
+            ? new Date(goldPayload.timestamp * 1000).toLocaleDateString('tr-TR')
+            : null
+          setMetalState({
+            status: 'success',
+            goldGram: goldRate / TROY_OUNCE_IN_GRAMS,
+            silverGram: silverRate / TROY_OUNCE_IN_GRAMS,
+            date: metalDate,
+            error: null,
+            source: 'MetalpriceAPI',
+          })
+          return
+        }
+
+        const [goldResponse, silverResponse] = await Promise.all([
+          fetch(`${RATES_URL}/XAU`, { signal: controller.signal }),
+          fetch(`${RATES_URL}/XAG`, { signal: controller.signal }),
+        ])
+        if (!goldResponse.ok || !silverResponse.ok) {
+          throw new Error('Altin/gumus verisi alinamadi.')
+        }
+        const [goldPayload, silverPayload] = await Promise.all([
+          goldResponse.json(),
+          silverResponse.json(),
+        ])
+        if (goldPayload.result === 'error' || silverPayload.result === 'error') {
+          throw new Error('Altin/gumus verisi alinamadi.')
+        }
+        const goldRate = goldPayload.rates?.[METAL_DISPLAY_CURRENCY]
+        const silverRate = silverPayload.rates?.[METAL_DISPLAY_CURRENCY]
+        if (!goldRate || !silverRate) {
+          throw new Error('Altin/gumus kurlari bulunamadi.')
+        }
+        setMetalState({
+          status: 'success',
+          goldGram: goldRate / TROY_OUNCE_IN_GRAMS,
+          silverGram: silverRate / TROY_OUNCE_IN_GRAMS,
+          date: goldPayload.time_last_update_utc
+            ? new Date(goldPayload.time_last_update_utc).toLocaleDateString(
+                'tr-TR'
+              )
+            : goldPayload.time_last_update_utc,
+          error: null,
+          source: 'open.er-api.com',
+        })
+      } catch (error) {
+        if (error.name === 'AbortError') return
+        setMetalState({
+          status: 'error',
+          goldGram: null,
+          silverGram: null,
+          date: null,
+          error: error.message,
+          source: null,
+        })
+      }
+    }
+
+    loadMetals()
+
+    return () => controller.abort()
+  }, [])
+
   const converted = useMemo(() => {
     const numeric = parseFloat(amount)
     if (!rateState.rate || Number.isNaN(numeric)) return '—'
     return (numeric * rateState.rate).toFixed(2)
   }, [amount, rateState.rate])
+
+  const formatMetal = (value) =>
+    value ? value.toFixed(2) : '—'
 
   const swapCurrencies = () => {
     setFromCurrency(toCurrency)
@@ -259,6 +388,41 @@ function CurrencyPanel() {
           {symbolsState.status === 'error' && symbolsState.error}
           {symbolsState.status === 'success' &&
             'Kur verileri open.er-api.com servisinden gelir.'}
+        </div>
+
+        <div className="metals">
+          <div className="metals__header">
+            <p className="currency__label">Altin & Gumus</p>
+            {metalState.status === 'success' && metalState.date && (
+              <span className="metals__date">{metalState.date}</span>
+            )}
+          </div>
+          <div className="metals__grid">
+            <div className="metals__card">
+              <span className="metals__title">Altin (gram)</span>
+              <span className="metals__value">
+                {formatMetal(metalState.goldGram)} {METAL_DISPLAY_CURRENCY}
+              </span>
+            </div>
+            <div className="metals__card">
+              <span className="metals__title">Gumus (gram)</span>
+              <span className="metals__value">
+                {formatMetal(metalState.silverGram)} {METAL_DISPLAY_CURRENCY}
+              </span>
+            </div>
+          </div>
+          {metalState.status === 'loading' && (
+            <div className="currency__hint">Altin/gumus aliniyor...</div>
+          )}
+          {metalState.status === 'error' && (
+            <div className="currency__hint error-text">{metalState.error}</div>
+          )}
+          {metalState.status === 'success' && (
+            <div className="currency__hint">
+              Degerler troy ons uzerinden grama cevrildi.
+              {metalState.source && ` · Kaynak: ${metalState.source}`}
+            </div>
+          )}
         </div>
       </div>
     </article>

@@ -64,6 +64,52 @@
   color: var(--muted);
 }
 
+.metals {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 6px;
+}
+
+.metals__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.metals__date {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.metals__grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.metals__card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 14px;
+  border-radius: 16px;
+  background: rgba(237, 235, 214, 0.75);
+}
+
+.metals__title {
+  font-size: 0.85rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+}
+
+.metals__value {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
 .error-text {
   color: #842b16;
   font-weight: 600;
