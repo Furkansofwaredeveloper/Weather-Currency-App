@@ -3,10 +3,6 @@ import './CurrencyPanel.scss'
 
 const RATES_URL =
   import.meta.env.VITE_RATES_URL || 'https://open.er-api.com/v6/latest'
-const METALPRICE_API_URL =
-  import.meta.env.VITE_METALPRICE_API_URL ||
-  'https://api.metalpriceapi.com/v1/latest'
-const METALPRICE_API_KEY = import.meta.env.VITE_METALPRICE_API_KEY
 const FALLBACK_CURRENCIES = [
   { code: 'TRY', description: 'Turkish Lira' },
   { code: 'USD', description: 'US Dollar' },
@@ -176,7 +172,7 @@ function CurrencyPanel() {
         })
       )
     } catch (error) {
-      // Ignore storage errors (e.g., quota or private mode).
+      
     }
   }, [amount, fromCurrency, toCurrency])
 
@@ -192,56 +188,6 @@ function CurrencyPanel() {
           error: null,
           source: null,
         })
-        if (METALPRICE_API_KEY) {
-          const buildMetalpriceUrl = (base, quote) => {
-            const params = new URLSearchParams({
-              api_key: METALPRICE_API_KEY,
-              base,
-              currencies: quote,
-            })
-            return `${METALPRICE_API_URL}?${params.toString()}`
-          }
-          const [goldResponse, silverResponse] = await Promise.all([
-            fetch(
-              buildMetalpriceUrl('XAU', METAL_DISPLAY_CURRENCY),
-              { signal: controller.signal }
-            ),
-            fetch(
-              buildMetalpriceUrl('XAG', METAL_DISPLAY_CURRENCY),
-              { signal: controller.signal }
-            ),
-          ])
-          if (!goldResponse.ok || !silverResponse.ok) {
-            throw new Error('Altin/gumus verisi alinamadi.')
-          }
-          const [goldPayload, silverPayload] = await Promise.all([
-            goldResponse.json(),
-            silverResponse.json(),
-          ])
-          if (goldPayload.success === false || silverPayload.success === false) {
-            throw new Error('Altin/gumus verisi alinamadi.')
-          }
-          const goldRate = goldPayload.rates?.[METAL_DISPLAY_CURRENCY]
-          const silverRate = silverPayload.rates?.[METAL_DISPLAY_CURRENCY]
-          if (!goldRate || !silverRate) {
-            throw new Error('Altin/gumus kurlari bulunamadi.')
-          }
-          const metalDate = goldPayload.date
-            ? new Date(goldPayload.date).toLocaleDateString('tr-TR')
-            : goldPayload.timestamp
-            ? new Date(goldPayload.timestamp * 1000).toLocaleDateString('tr-TR')
-            : null
-          setMetalState({
-            status: 'success',
-            goldGram: goldRate / TROY_OUNCE_IN_GRAMS,
-            silverGram: silverRate / TROY_OUNCE_IN_GRAMS,
-            date: metalDate,
-            error: null,
-            source: 'MetalpriceAPI',
-          })
-          return
-        }
-
         const [goldResponse, silverResponse] = await Promise.all([
           fetch(`${RATES_URL}/XAU`, { signal: controller.signal }),
           fetch(`${RATES_URL}/XAG`, { signal: controller.signal }),
