@@ -3,9 +3,6 @@ import './CurrencyPanel.scss'
 
 const RATES_URL =
   import.meta.env.VITE_RATES_URL || 'https://open.er-api.com/v6/latest'
-const EXCHANGE_RATE_HOST_URL =
-  import.meta.env.VITE_EXCHANGE_RATE_HOST_URL ||
-  'https://api.exchangerate.host/latest'
 const FALLBACK_CURRENCIES = [
   { code: 'TRY', description: 'Turkish Lira' },
   { code: 'USD', description: 'US Dollar' },
@@ -19,7 +16,6 @@ const FALLBACK_CURRENCIES = [
 const CURRENCY_STORAGE_KEY = 'currencySelection'
 const METAL_DISPLAY_CURRENCY =
   import.meta.env.VITE_METAL_DISPLAY_CURRENCY || 'TRY'
-const TROY_OUNCE_IN_GRAMS = 31.1034768
 
 const getStoredCurrencySelection = () => {
   if (typeof window === 'undefined') return null
@@ -192,35 +188,26 @@ function CurrencyPanel() {
           source: null,
         })
         const response = await fetch(
-          `${EXCHANGE_RATE_HOST_URL}?base=USD&symbols=${encodeURIComponent(
-            `${METAL_DISPLAY_CURRENCY},XAU,XAG`
-          )}`,
+          `/.netlify/functions/metal-prices?currency=${METAL_DISPLAY_CURRENCY}`,
           { signal: controller.signal }
         )
         if (!response.ok) {
           throw new Error('Altin/gumus verisi alinamadi.')
         }
         const payload = await response.json()
-        if (payload.success === false) {
-          throw new Error('Altin/gumus verisi alinamadi.')
+        if (payload.error) {
+          throw new Error(payload.error)
         }
-        const usdToTry = payload.rates?.[METAL_DISPLAY_CURRENCY]
-        const usdToXau = payload.rates?.XAU
-        const usdToXag = payload.rates?.XAG
-        if (!usdToTry || !usdToXau || !usdToXag) {
+        if (!payload.goldGram || !payload.silverGram) {
           throw new Error('Altin/gumus kurlari bulunamadi.')
         }
-        const goldOunceTry = (1 / usdToXau) * usdToTry
-        const silverOunceTry = (1 / usdToXag) * usdToTry
         setMetalState({
           status: 'success',
-          goldGram: goldOunceTry / TROY_OUNCE_IN_GRAMS,
-          silverGram: silverOunceTry / TROY_OUNCE_IN_GRAMS,
-          date: payload.date
-            ? new Date(payload.date).toLocaleDateString('tr-TR')
-            : payload.date,
+          goldGram: payload.goldGram,
+          silverGram: payload.silverGram,
+          date: payload.date,
           error: null,
-          source: 'exchangerate.host',
+          source: payload.source || 'MetalpriceAPI',
         })
       } catch (error) {
         if (error.name === 'AbortError') return
