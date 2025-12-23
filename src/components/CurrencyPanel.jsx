@@ -3,6 +3,9 @@ import './CurrencyPanel.scss'
 
 const RATES_URL =
   import.meta.env.VITE_RATES_URL || 'https://open.er-api.com/v6/latest'
+const EXCHANGE_RATE_HOST_URL =
+  import.meta.env.VITE_EXCHANGE_RATE_HOST_URL ||
+  'https://api.exchangerate.host/latest'
 const FALLBACK_CURRENCIES = [
   { code: 'TRY', description: 'Turkish Lira' },
   { code: 'USD', description: 'US Dollar' },
@@ -172,7 +175,7 @@ function CurrencyPanel() {
         })
       )
     } catch (error) {
-      
+      // Ignore storage errors (e.g., quota or private mode).
     }
   }, [amount, fromCurrency, toCurrency])
 
@@ -188,14 +191,17 @@ function CurrencyPanel() {
           error: null,
           source: null,
         })
-        const response = await fetch(`${RATES_URL}/USD`, {
-          signal: controller.signal,
-        })
+        const response = await fetch(
+          `${EXCHANGE_RATE_HOST_URL}?base=USD&symbols=${encodeURIComponent(
+            `${METAL_DISPLAY_CURRENCY},XAU,XAG`
+          )}`,
+          { signal: controller.signal }
+        )
         if (!response.ok) {
           throw new Error('Altin/gumus verisi alinamadi.')
         }
         const payload = await response.json()
-        if (payload.result === 'error') {
+        if (payload.success === false) {
           throw new Error('Altin/gumus verisi alinamadi.')
         }
         const usdToTry = payload.rates?.[METAL_DISPLAY_CURRENCY]
@@ -210,11 +216,11 @@ function CurrencyPanel() {
           status: 'success',
           goldGram: goldOunceTry / TROY_OUNCE_IN_GRAMS,
           silverGram: silverOunceTry / TROY_OUNCE_IN_GRAMS,
-          date: payload.time_last_update_utc
-            ? new Date(payload.time_last_update_utc).toLocaleDateString('tr-TR')
-            : payload.time_last_update_utc,
+          date: payload.date
+            ? new Date(payload.date).toLocaleDateString('tr-TR')
+            : payload.date,
           error: null,
-          source: 'open.er-api.com',
+          source: 'exchangerate.host',
         })
       } catch (error) {
         if (error.name === 'AbortError') return
