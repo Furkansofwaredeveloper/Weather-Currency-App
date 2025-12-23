@@ -188,34 +188,31 @@ function CurrencyPanel() {
           error: null,
           source: null,
         })
-        const [goldResponse, silverResponse] = await Promise.all([
-          fetch(`${RATES_URL}/XAU`, { signal: controller.signal }),
-          fetch(`${RATES_URL}/XAG`, { signal: controller.signal }),
-        ])
-        if (!goldResponse.ok || !silverResponse.ok) {
+        const response = await fetch(`${RATES_URL}/USD`, {
+          signal: controller.signal,
+        })
+        if (!response.ok) {
           throw new Error('Altin/gumus verisi alinamadi.')
         }
-        const [goldPayload, silverPayload] = await Promise.all([
-          goldResponse.json(),
-          silverResponse.json(),
-        ])
-        if (goldPayload.result === 'error' || silverPayload.result === 'error') {
+        const payload = await response.json()
+        if (payload.result === 'error') {
           throw new Error('Altin/gumus verisi alinamadi.')
         }
-        const goldRate = goldPayload.rates?.[METAL_DISPLAY_CURRENCY]
-        const silverRate = silverPayload.rates?.[METAL_DISPLAY_CURRENCY]
-        if (!goldRate || !silverRate) {
+        const usdToTry = payload.rates?.[METAL_DISPLAY_CURRENCY]
+        const usdToXau = payload.rates?.XAU
+        const usdToXag = payload.rates?.XAG
+        if (!usdToTry || !usdToXau || !usdToXag) {
           throw new Error('Altin/gumus kurlari bulunamadi.')
         }
+        const goldOunceTry = (1 / usdToXau) * usdToTry
+        const silverOunceTry = (1 / usdToXag) * usdToTry
         setMetalState({
           status: 'success',
-          goldGram: goldRate / TROY_OUNCE_IN_GRAMS,
-          silverGram: silverRate / TROY_OUNCE_IN_GRAMS,
-          date: goldPayload.time_last_update_utc
-            ? new Date(goldPayload.time_last_update_utc).toLocaleDateString(
-                'tr-TR'
-              )
-            : goldPayload.time_last_update_utc,
+          goldGram: goldOunceTry / TROY_OUNCE_IN_GRAMS,
+          silverGram: silverOunceTry / TROY_OUNCE_IN_GRAMS,
+          date: payload.time_last_update_utc
+            ? new Date(payload.time_last_update_utc).toLocaleDateString('tr-TR')
+            : payload.time_last_update_utc,
           error: null,
           source: 'open.er-api.com',
         })
