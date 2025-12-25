@@ -90,7 +90,7 @@ function EarthquakePanel() {
       const stored = window.localStorage.getItem(NOTIFICATION_STORAGE_KEY)
       if (stored === 'false') return false
     } catch (error) {
-      // Ignore storage errors.
+     
     }
     return true
   })
@@ -261,7 +261,7 @@ function EarthquakePanel() {
         String(notificationsEnabled)
       )
     } catch (error) {
-      // Ignore storage errors.
+      
     }
   }, [notificationsEnabled])
 

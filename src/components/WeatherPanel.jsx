@@ -147,7 +147,7 @@ function WeatherPanel() {
         JSON.stringify({ city: selectedCity, district: selectedDistrict })
       )
     } catch (error) {
-      // Ignore storage errors (e.g., quota or private mode).
+      
     }
   }, [selectedCity, selectedDistrict])
 

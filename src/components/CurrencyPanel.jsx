@@ -171,7 +171,7 @@ function CurrencyPanel() {
         })
       )
     } catch (error) {
-      // Ignore storage errors (e.g., quota or private mode).
+      
     }
   }, [amount, fromCurrency, toCurrency])
 
