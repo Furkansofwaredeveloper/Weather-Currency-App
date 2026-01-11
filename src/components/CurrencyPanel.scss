@@ -6,9 +6,17 @@
 
 .currency__row {
   display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
   gap: 12px;
   align-items: end;
+}
+
+.currency__row .field {
+  min-width: 0;
+}
+
+.currency__row select {
+  width: 100%;
 }
 
 .swap {

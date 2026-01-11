@@ -434,13 +434,13 @@ function EarthquakePanel() {
         <div className="quake__notification">
           <span>Bildirim</span>
           {notificationStatus === 'unsupported' && (
-            <p>Tarayici bildirimleri desteklemiyor.</p>
+            <p>Tarayıcı bildirimleri desteklemiyor.</p>
           )}
           {notificationStatus === 'granted' && notificationsEnabled && (
-            <p>Bildirimler acik.</p>
+            <p>Bildirimler açık.</p>
           )}
           {notificationStatus === 'granted' && !notificationsEnabled && (
-            <p>Bildirimler kapali.</p>
+            <p>Bildirimler kapalı.</p>
           )}
           {notificationStatus === 'denied' && (
             <p>Bildirim izni reddedildi.</p>
@@ -448,7 +448,7 @@ function EarthquakePanel() {
           {(notificationStatus === 'default' ||
             (notificationStatus === 'granted' && !notificationsEnabled)) && (
             <button type="button" onClick={enableNotifications}>
-              Bildirimleri ac
+              Bildirimleri aç
             </button>
           )}
           {notificationStatus === 'granted' && notificationsEnabled && (
